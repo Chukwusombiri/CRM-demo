@@ -15,7 +15,8 @@ export default function Signup({}) {
     const [vaErrors, setVaErrors] = useState(null);
   
     const { setUser, setTokenLocal } = useAuthContext();   
-  
+
+    // Handle form submit
     function handleSubmit(evt) {
       evt.preventDefault();
 

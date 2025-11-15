@@ -1,77 +1,50 @@
-# backend/Dockerfile
-# Multi-stage build: build assets & vendors, then produce a small runtime image
-
-# ----- Stage 1: Node (build frontend assets) -----
-FROM node:18-alpine AS node_builder
-WORKDIR /srv/frontend
-ARG VITE_API_BASE_URL=/api
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-COPY frontend/package*.json ./
-RUN npm ci
-COPY frontend/ .
+# Stage 1: Frontend build
+FROM node:22-alpine AS node_builder
+ENV VITE_API_URL=/api
+WORKDIR /app
+COPY ./frontend/package*.json ./
+RUN npm install
+COPY ./frontend . 
 RUN npm run build
 
-# ----- Stage 2: Composer (install PHP deps) -----
-FROM composer:2 AS vendor_builder
-WORKDIR /srv/app
-COPY composer.json composer.lock ./ 
-RUN composer install --no-dev --no-scripts --prefer-dist --no-interaction --optimize-autoloader
+# Stage 2: PHP dependencies
+FROM php:8.4-fpm AS builder
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl unzip libpq-dev libonig-dev libssl-dev libxml2-dev \
+    libcurl4-openssl-dev libicu-dev libzip-dev \
+    && docker-php-ext-install -j$(nproc) \
+    pdo_mysql pdo_pgsql pgsql opcache intl zip bcmath soap \
+    && pecl install redis && docker-php-ext-enable redis \
+    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# ----- Stage 3: PHP runtime (final image) -----
-FROM php:8.2-fpm-alpine
+WORKDIR /var/www
+COPY . /var/www
+COPY --from=node_builder /app/dist /var/www/public
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
 
-# system deps and php extensions commonly needed for Laravel + MySQL
-RUN apk add --no-cache \     
-      curl \
-      libpng-dev \
-      libjpeg-turbo-dev \
-      libwebp-dev \
-      libxpm-dev \
-      libzip-dev \
-      nodejs npm \
-      oniguruma-dev \
-      openrc \
-      mysql-client \
-    && docker-php-ext-configure gd --with-jpeg --with-webp \
-    && docker-php-ext-install -j$(nproc) pdo_mysql gd mbstring zip exif pcntl bcmath \
-    \
-    # Build dependencies for PECL redis
-    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers openssl-dev \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del .build-deps
+# Stage 3: PHP-FPM production
+FROM php:8.4-fpm AS api
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev libicu-dev libzip-dev libfcgi-bin procps \
+    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-WORKDIR /var/www/html
+# Copy healthcheck, extensions, and application
+COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
+COPY --from=builder /var/www /var/www
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+RUN sed -i '/\[www\]/a pm.status_path = /status' /usr/local/etc/php-fpm.d/zz-docker.conf
 
-# copy application source
-COPY --exclude=frontend . ./
-
-# copy composer vendor from vendor_builder
-COPY --from=vendor_builder /srv/app/vendor ./vendor
-
-# copy frontend build into public/
-# adjust path if your frontend build folder differs (dist, build)
-COPY --from=node_builder /srv/frontend/dist ./public
-
-# copy entrypoint & nginx config
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY docker/nginx.conf /etc/nginx/nginx.conf
-
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# set permissions for Laravel storage & bootstrap
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-
-# expose http port
-EXPOSE 80
-
-# default env (can be overridden in compose)
-ENV APP_ENV=production \
-    APP_DEBUG=false \
-    APP_URL=http://localhost \
-    # default DB host set by compose
-    DB_HOST=db \
-    DB_PORT=3306
-
-ENTRYPOINT ["entrypoint.sh"]
+WORKDIR /var/www
+RUN chown -R www-data:www-data /var/www
+USER www-data
+EXPOSE 9000
 CMD ["php-fpm"]
+
+# Stage 4: Nginx
+FROM nginx:alpine AS webserver
+COPY ./docker/nginx.conf /etc/nginx/nginx.conf
+COPY --from=builder /var/www/public /var/www/public
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

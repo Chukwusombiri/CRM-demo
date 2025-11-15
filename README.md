@@ -1,66 +1,282 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# React + Laravel CRM Application
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Demo Customer Relationship Management (CRM) application built with React frontend and Laravel backend, containerized with Docker for easy deployment.
 
-## About Laravel
+## 🚀 Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Frontend**: React with Vite build system
+- **Backend**: Laravel PHP framework
+- **Database**: MySQL 8.0
+- **Web Server**: Nginx
+- **Database Management**: Adminer included
+- **Containerized**: Full Docker support
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📋 Prerequisites
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+- Git
 
-## Learning Laravel
+## 🛠 Quick Start (Development)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 1. Clone and Setup
+```bash
+git clone <your-repository>
+cd react-laravel-crm
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### 2. Environment Configuration
+```bash
+# Copy environment file
+cp .env.example .env
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# Generate Laravel application key
+docker compose run --rm api php artisan key:generate
+```
 
-## Laravel Sponsors
+### 3. Start the Application
+```bash
+# Build and start all services
+docker compose up --build -d
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# View logs
+docker compose logs -f
+```
 
-### Premium Partners
+### 4. Application Access
+Frontend Application: http://localhost:5000
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+Adminer (Database GUI): http://localhost:8080
 
-## Contributing
+API Endpoints: http://localhost:5000/api/*
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🏗 Project Structure
+text
+react-laravel-crm/
+├── frontend/                 # React frontend application
+│   ├── src/
+│   ├── package.json
+│   └── vite.config.js
+├── docker/
+│   └── nginx.conf           # Nginx configuration
+├── Dockerfile               # Multi-stage build configuration
+├── docker-compose.yaml      # Service orchestration
+├── .env.example             # Environment variables template
+└── README.md
 
-## Code of Conduct
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 🐳 Docker Services
+Service	Port	Description	Container Name
+webserver	5000	Nginx web server	reactLaravelCRM-webserver
+api	9000	Laravel PHP-FPM API	reactLaravelCRM-api
+db	3307	MySQL 8.0 database	reactLaravelCRM_db
+adminer	8080	Database management	reactLaravelCRM-adminer
 
-## Security Vulnerabilities
+## 🔧 Production Deployment
+### 1. Server Preparation
+```bash
+# Install Docker on your server
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+``` 
 
-## License
+### 2. Application Deployment
+```bash
+# Clone your project
+git clone <your-repository>
+cd react-laravel-crm
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# Create production environment file
+cp .env.example .env
+nano .env  # Edit with production values
+```
+
+### 3. Production Environment Variables
+Update .env with production values:
+
+env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://yourdomain.com
+
+DB_CONNECTION=mysql
+DB_HOST=db
+DB_PORT=3306
+DB_DATABASE=reactLaravelCRM_db
+DB_USERNAME=app_user
+DB_PASSWORD=strong_production_password
+
+# Generate a secure app key
+APP_KEY=base64:...
+
+### 4. Database Setup
+```bash
+# Run database migrations
+docker compose run --rm api php artisan migrate --force
+
+# Seed initial data (if needed)
+docker compose run --rm api php artisan db:seed --force
+```
+
+### 5. Storage Permissions
+```bash
+# Ensure storage permissions are correct
+docker compose run --rm api chmod -R 775 storage
+docker compose run --rm api chown -R www-data:www-data storage
+```
+
+### 6. Start Production Services
+```bash
+# Build and start in detached mode
+docker compose up --build -d
+
+# Verify all services are running
+docker compose ps
+```
+
+### 7. SSL/HTTPS Setup (Recommended)
+Use a reverse proxy like Nginx or Traefik:
+
+```nginx
+# Example nginx reverse proxy config
+server {
+    listen 80;
+    server_name yourdomain.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name yourdomain.com;
+    
+    ssl_certificate /path/to/certificate.crt;
+    ssl_certificate_key /path/to/private.key;
+    
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+## 🔄 Common Operations
+Database Management
+```bash
+# Run migrations
+docker compose run --rm api php artisan migrate
+
+# Rollback migrations
+docker compose run --rm api php artisan migrate:rollback
+
+# Access MySQL console
+docker compose exec db mysql -u app_user -p reactLaravelCRM_db
+```
+
+## Application Maintenance
+```bash
+# View logs
+docker compose logs api
+docker compose logs webserver
+
+# Restart services
+docker compose restart api
+docker compose restart webserver
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (warning: deletes data)
+docker compose down -v
+Development Commands
+bash
+# Run Laravel commands
+docker compose run --rm api php artisan [command]
+
+# Run npm commands in frontend (if needed)
+cd frontend && npm install && npm run dev
+
+# Clear application cache
+docker compose run --rm api php artisan cache:clear
+docker compose run --rm api php artisan config:clear
+docker compose run --rm api php artisan route:clear
+```
+
+## 🛡 Security Considerations
+Production Security Checklist
+- Change all default passwords in .env
+
+- Set APP_DEBUG=false in production
+
+- Use strong APP_KEY
+
+- Enable HTTPS with SSL certificates
+
+- Regularly update Docker images
+
+- Configure firewall rules
+
+- Set up regular backups
+
+- Monitor container logs
+
+## Database Security
+```bash
+# Regular backups
+docker compose exec db mysqldump -u app_user -p reactLaravelCRM_db > backup_$(date +%Y%m%d).sql
+
+# Restore from backup
+docker compose exec -i db mysql -u app_user -p reactLaravelCRM_db < backup_file.sql
+```
+
+## 🔍 Troubleshooting
+Common Issues
+- Containers not starting:
+
+```bash
+# Check container status
+docker compose ps
+
+# View detailed logs
+docker compose logs [service-name]
+```
+
+- Database connection issues:
+
+```bash
+# Check if database is running
+docker compose ps db
+
+# Test database connection
+docker compose exec db mysql -u app_user -p
+```
+
+- Permission errors:
+
+```bash
+# Fix storage permissions
+docker compose run --rm api chmod -R 775 storage bootstrap/cache
+```
+
+- Port conflicts:
+
+Change ports in docker-compose.yaml if 5000, 8080, or 3307 are already in use
+
+## 📞 Support
+For issues and questions:
+
+- Check the troubleshooting section above
+
+- Review Docker and container logs
+
+- Ensure all environment variables are properly set
+
+- Verify port availability on your system
+
+- **Note:** This README assumes you have a basic understanding of Docker and Laravel. Adjust the commands and configurations according to your specific project requirements and server environment.
