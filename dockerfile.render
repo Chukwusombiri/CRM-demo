@@ -1,43 +1,47 @@
-# Stage 1: Frontend build
+# --- Stage 1: Build React ---
 FROM node:22-alpine AS node_builder
-ENV VITE_API_URL=/api
 WORKDIR /app
 COPY ./frontend/package*.json ./
 RUN npm install
-COPY ./frontend . 
+COPY ./frontend ./
 RUN npm run build
 
-# Stage 2: PHP dependencies
-FROM php:8.4-fpm AS builder
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl unzip libpq-dev libonig-dev libssl-dev libxml2-dev \
-    libcurl4-openssl-dev libicu-dev libzip-dev \
-    && docker-php-ext-install -j$(nproc) \
-    pdo_mysql pdo_pgsql pgsql opcache intl zip bcmath soap \
-    && pecl install redis && docker-php-ext-enable redis \
-    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# --- Stage 2: Build Laravel ---
+FROM php:8.4-fpm AS php_builder
+
+RUN apt-get update && apt-get install -y \
+    curl unzip libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+    && docker-php-ext-install pdo_mysql bcmath zip
 
 WORKDIR /var/www
 COPY . /var/www
 COPY --from=node_builder /app/dist /var/www/public
+
+# Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
+    && composer install --no-dev --optimize-autoloader --no-interaction
 
-# Stage 3: PHP-FPM production
-FROM php:8.4-fpm AS api
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev libicu-dev libzip-dev libfcgi-bin procps \
-    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Copy healthcheck, extensions, and application
-COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
-COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
-COPY --from=builder /var/www /var/www
-RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
-RUN sed -i '/\[www\]/a pm.status_path = /status' /usr/local/etc/php-fpm.d/zz-docker.conf
+# --- Stage 3: Final Image (Nginx + php-fpm combined) ---
+FROM php:8.4-fpm
 
+# Install Nginx + Supervisor
+RUN apt-get update && apt-get install -y nginx supervisor \
+    && mkdir -p /var/log/supervisor
+
+# Copy app from builder
+COPY --from=php_builder /var/www /var/www
+
+# Copy nginx config
+COPY ./docker/nginx.render.conf /etc/nginx/nginx.conf
+
+# Copy supervisord config
+COPY ./docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Set working directory
 WORKDIR /var/www
 RUN chown -R www-data:www-data /var/www
-USER www-data
-EXPOSE 9000
-CMD ["php-fpm"]
+
+EXPOSE 80
+CMD ["/usr/bin/supervisord"]
