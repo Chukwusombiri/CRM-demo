@@ -6,13 +6,13 @@ RUN npm install
 COPY ./frontend ./
 RUN npm run build
 
-
 # --- Stage 2: Build Laravel ---
 FROM php:8.4-fpm AS php_builder
 
 RUN apt-get update && apt-get install -y \
     curl unzip libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
-    && docker-php-ext-install pdo_mysql bcmath zip
+    libpq-dev \
+    && docker-php-ext-install pdo_mysql pdo_pgsql bcmath zip
 
 WORKDIR /var/www
 COPY . /var/www
@@ -22,13 +22,26 @@ COPY --from=node_builder /app/dist /var/www/public
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
     && composer install --no-dev --optimize-autoloader --no-interaction
 
-
 # --- Stage 3: Final Image (Nginx + php-fpm combined) ---
 FROM php:8.4-fpm
 
+# Install system dependencies and PHP extensions
+RUN apt-get update && apt-get install -y \
+    nginx \
+    supervisor \
+    libzip-dev \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    libpq-dev \
+    default-mysql-client \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql pdo_pgsql bcmath zip gd \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Nginx + Supervisor
-RUN apt-get update && apt-get install -y nginx supervisor \
-    && mkdir -p /var/log/supervisor
+RUN mkdir -p /var/log/supervisor
 
 # Copy app from builder
 COPY --from=php_builder /var/www /var/www
@@ -41,7 +54,11 @@ COPY ./docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Set working directory
 WORKDIR /var/www
-RUN chown -R www-data:www-data /var/www
+
+# Fix permissions
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 EXPOSE 80
-CMD php artisan migrate --force && /usr/bin/supervisord
+
+# Use a script for startup to handle migrations properly
+CMD ["sh", "-c", "php artisan migrate --force && /usr/bin/supervisord"]
