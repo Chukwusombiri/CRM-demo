@@ -1,6 +1,7 @@
 # React + Laravel CRM Application
 
 A Demo Customer Relationship Management (CRM) application built with React frontend and Laravel backend, containerized with Docker for easy deployment.
+- Live Demo - [https://crm-demo-fgkb.onrender.com](https://crm-demo-fgkb.onrender.com)
 
 ## 🚀 Features
 
@@ -280,3 +281,12 @@ For issues and questions:
 - Verify port availability on your system
 
 - **Note:** This README assumes you have a basic understanding of Docker and Laravel. Adjust the commands and configurations according to your specific project requirements and server environment.
+
+## Deploying to Cloud hosting service - Render
+- Start a new service choosing render Web Service as service type
+- Choose docker as your environment
+- Set your context to repo root i.e .
+- Set dockerfile to ./dockerfile.render
+- Make sure you copy your .env content and paste into environment variable in render
+- Inspect your Database credentials to make sure they are good because if not the application will crash
+- Scroll to the bottom and click 'Deploy'
