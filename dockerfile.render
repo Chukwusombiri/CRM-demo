@@ -44,4 +44,4 @@ WORKDIR /var/www
 RUN chown -R www-data:www-data /var/www
 
 EXPOSE 80
-CMD ["/usr/bin/supervisord"]
+CMD php artisan migrate --force && /usr/bin/supervisord
